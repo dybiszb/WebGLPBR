@@ -48,9 +48,95 @@ const m4 = twgl.m4;
 const v3 = twgl.v3;
 const canvas = document.querySelector("#sceneCanvas");
 const gl = canvas.getContext("webgl");
-twgl.setDefaults({
-    attribPrefix: "a_"
+twgl.setDefaults({attribPrefix: "a_"});
+
+// =============================================================================
+//  Steering setup.
+// =============================================================================
+document.onkeydown = IO.handleKeyDown;
+document.onkeyup = IO.handleKeyUp;
+document.onmouseup = IO.handleMouseUp;
+document.onmousemove = IO.handleMouseMove;
+canvas.onmousedown = IO.handleMouseDown;
+
+// =============================================================================
+// Initialize statistics panel.
+// =============================================================================
+var statsFPS = new Stats();
+statsFPS.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+statsFPS.dom.style.cssText = 'position:absolute;bottom:0px;right:160px;';
+document.body.appendChild(statsFPS.dom);
+
+var statsMBs = new Stats();
+statsMBs.showPanel(2); // Panel 1 = ms
+statsMBs.dom.style.cssText = 'position:absolute;bottom:0px;right:80px;';
+document.body.appendChild(statsMBs.dom);
+
+var statsMs = new Stats();
+statsMs.showPanel(1); // Panel 1 = ms
+statsMs.dom.style.cssText = 'position:absolute;bottom:0px;right:0px;';
+document.body.appendChild(statsMs.dom);
+
+// =============================================================================
+//  MVP/viewport.
+// =============================================================================
+const projection = m4.identity();
+let view = m4.identity();
+const fov = 45 * Math.PI / 180;
+const near = 0.01;
+const far = 1000.0;
+
+// =============================================================================
+// Textures
+// =============================================================================
+const textures = twgl.createTextures(gl, {
+  albedo: {
+    src: `./res/rustediron-streaks_basecolor.png`,
+  },
+  metallic: {
+    src: `./res/rustediron-streaks_metallic.png`,
+  },
+  normal: {
+    src: `./res/rustediron-streaks_normal.png`,
+  },
+  roughness: {
+    src: `./res/rustediron-streaks_roughness.png`,
+  },
 });
+
+// =============================================================================
+//  Utilities.
+// =============================================================================
+const updateViewMatrix = function () {
+    SpectatorCamera.getViewMatrix(view);
+    m4.inverse(view, view);
+}
+
+// =============================================================================
+//  Rendering function.
+// =============================================================================
+function render(time) {
+    statsFPS.begin();
+    statsMBs.begin();
+    statsMs.begin();
+    IO.handleKeyboard();
+    updateViewMatrix();
+
+    twgl.resizeCanvasToDisplaySize(gl.canvas);
+    m4.perspective(fov, gl.canvas.clientWidth / gl.canvas.clientHeight, near,
+                   far, projection);
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    statsMs.end();
+    statsMBs.end();
+    statsFPS.end();
+    requestAnimationFrame(render);
+}
+
+requestAnimationFrame(render);
 
 </script>
 
