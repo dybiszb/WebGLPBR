@@ -10,13 +10,13 @@
             height: 100vh;
         }
 
-        #c {
+        #sceneCanvas {
             display: block;
             width: 100%;
             height: 100%;
         }
 
-        #shaderJP2 {
+        #shadersViewer {
             width: 30%;
             height: 100%;
             overflow: auto;
@@ -32,11 +32,26 @@
 </head>
 
 <body>
-    <canvas id="c" width="624" height="710"></canvas>
-    <textarea id="shaderJP2"></textarea>
+    <canvas id="sceneCanvas" width="624" height="710"></canvas>
+    <textarea id="shadersViewer"></textarea>
+    <script src="js/externals/twgl-full.min.js"></script>
+    <script src="js/externals/stats.min.js"></script>
+    <script src="js/externals/dat.gui.min.js"></script>
+    <script src="js/io.js"></script>
 </body>
 
 <script>
+// =============================================================================
+// TWGL specific globals.
+// =============================================================================
+const m4 = twgl.m4;
+const v3 = twgl.v3;
+const canvas = document.querySelector("#sceneCanvas");
+const gl = canvas.getContext("webgl");
+twgl.setDefaults({
+    attribPrefix: "a_"
+});
+
 </script>
 
 </html>
