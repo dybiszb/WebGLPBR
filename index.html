@@ -17,14 +17,14 @@
         }
 
         #shadersViewer {
-            width: 26%;
+            width: 28%;
             height: 100%;
             overflow: auto;
             top:0px;
             left: 0px;
             margin: 0px;
             position: absolute;
-            background: rgba(29, 29, 29, 0.35);
+            background: rgba(29, 29, 29, 0.55);
             color: white;
         }
     </style>
@@ -129,7 +129,11 @@ const sphereUniforms = {
     u_model:      sphereModelMatrix,
     u_view:       view,
     u_projection: projection,
-    u_color:      [1.0, 0.0, 0.0]
+    u_color:      [1.0, 0.0, 0.0],
+    u_albedo:     textures.albedo,
+    u_metallic:   textures.metallic,
+    u_normal:     textures.normal,
+    u_roughness:  textures.roughness,
 };
 
 // =============================================================================
@@ -163,8 +167,9 @@ function render(time) {
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(0.1132, 0.1132, 0.1132, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
+    // rgb(43,87,151)
     renderSphere();
 
     statsMs.end();
