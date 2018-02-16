@@ -16,7 +16,7 @@ const SpectatorCamera = {
         m_pitch : 0,
         m_yaw : 0,
         m_angularSpeed : 0.5,
-        m_position : [0, 25, 0],
+        m_position : [0.0, 0.0, -7.0],
         m_movementSpeed : 0.25
     },
 

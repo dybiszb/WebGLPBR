@@ -17,7 +17,7 @@
         }
 
         #shadersViewer {
-            width: 30%;
+            width: 26%;
             height: 100%;
             overflow: auto;
             top:0px;
@@ -38,26 +38,27 @@
     <script src="js/externals/stats.min.js"></script>
     <script src="js/externals/dat.gui.min.js"></script>
     <script src="js/io.js"></script>
+    <script src="js/shaders.js"></script>
 </body>
 
 <script>
 // =============================================================================
 // TWGL specific globals.
 // =============================================================================
-const m4 = twgl.m4;
-const v3 = twgl.v3;
+const m4     = twgl.m4;
+const v3     = twgl.v3;
 const canvas = document.querySelector("#sceneCanvas");
-const gl = canvas.getContext("webgl");
+const gl     = canvas.getContext("webgl");
 twgl.setDefaults({attribPrefix: "a_"});
 
 // =============================================================================
 //  Steering setup.
 // =============================================================================
-document.onkeydown = IO.handleKeyDown;
-document.onkeyup = IO.handleKeyUp;
-document.onmouseup = IO.handleMouseUp;
+document.onkeydown   = IO.handleKeyDown;
+document.onkeyup     = IO.handleKeyUp;
+document.onmouseup   = IO.handleMouseUp;
 document.onmousemove = IO.handleMouseMove;
-canvas.onmousedown = IO.handleMouseDown;
+canvas.onmousedown   = IO.handleMouseDown;
 
 // =============================================================================
 // Initialize statistics panel.
@@ -78,31 +79,58 @@ statsMs.dom.style.cssText = 'position:absolute;bottom:0px;right:0px;';
 document.body.appendChild(statsMs.dom);
 
 // =============================================================================
+//  Shaders Viewer Panel.
+// =============================================================================
+const shaderCodeBox = document.querySelector('#shadersViewer');
+const shaderCode    = document.createTextNode(`${pbrVS}\n${pbrFG}`);
+shaderCodeBox.appendChild(shaderCode);
+
+// =============================================================================
 //  MVP/viewport.
 // =============================================================================
 const projection = m4.identity();
-let view = m4.identity();
-const fov = 45 * Math.PI / 180;
-const near = 0.01;
-const far = 1000.0;
+let   view       = m4.identity();
+const fov        = 45 * Math.PI / 180;
+const near       = 0.01;
+const far        = 1000.0;
 
 // =============================================================================
-// Textures
+// Load Textures.
 // =============================================================================
 const textures = twgl.createTextures(gl, {
-  albedo: {
-    src: `./res/rustediron-streaks_basecolor.png`,
-  },
-  metallic: {
-    src: `./res/rustediron-streaks_metallic.png`,
-  },
-  normal: {
-    src: `./res/rustediron-streaks_normal.png`,
-  },
-  roughness: {
-    src: `./res/rustediron-streaks_roughness.png`,
-  },
+  albedo:    {src: `./res/rustediron-streaks_basecolor.png`},
+  metallic:  {src: `./res/rustediron-streaks_metallic.png`},
+  normal:    {src: `./res/rustediron-streaks_normal.png`},
+  roughness: {src: `./res/rustediron-streaks_roughness.png`},
 });
+
+// =============================================================================
+//  Load Geometry.
+// =============================================================================
+let   sphereModelMatrix        = m4.identity();
+const sphereRadius             = 1.0;
+const sphereSubdivisionsAxis   = 20;
+const sphereSubdivisionsHeight = 20;
+const sphereBufferI            = twgl.primitives.createSphereBufferInfo(
+                                 gl,
+                                 sphereRadius,
+                                 sphereSubdivisionsAxis,
+                                 sphereSubdivisionsHeight);
+
+// =============================================================================
+//  Load shaders.
+// =============================================================================
+const sphereProgram = twgl.createProgramInfo(gl, [pbrVS, pbrFG]);
+
+// =============================================================================
+//  Load uniforms.
+// =============================================================================
+const sphereUniforms = {
+    u_model:      sphereModelMatrix,
+    u_view:       view,
+    u_projection: projection,
+    u_color:      [1.0, 0.0, 0.0]
+};
 
 // =============================================================================
 //  Utilities.
@@ -110,6 +138,13 @@ const textures = twgl.createTextures(gl, {
 const updateViewMatrix = function () {
     SpectatorCamera.getViewMatrix(view);
     m4.inverse(view, view);
+}
+
+const renderSphere = function () {
+    gl.useProgram(sphereProgram.program);
+    twgl.setUniforms(sphereProgram, sphereUniforms);
+    twgl.setBuffersAndAttributes(gl, sphereProgram, sphereBufferI);
+    twgl.drawBufferInfo(gl, sphereBufferI);
 }
 
 // =============================================================================
@@ -129,6 +164,8 @@ function render(time) {
 
     gl.enable(gl.DEPTH_TEST);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    renderSphere();
 
     statsMs.end();
     statsMBs.end();
