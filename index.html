@@ -123,7 +123,6 @@ const sphereBufferI            = twgl.primitives.createSphereBufferInfo(
                                  sphereSubdivisionsAxis,
                                  sphereSubdivisionsHeight);
 
- // var   lightModelMatrix        = m4.translation([-2.0, 0.0, 0.0]);
  const lightRadius             = 0.03;
  const lightSubdivisionsAxis   = 15;
  const lightSubdivisionsHeight = 15;
@@ -150,7 +149,10 @@ const sphereUniforms = {
     u_metallic:        textures.metallic,
     u_normal:          textures.normal,
     u_roughness:       textures.roughness,
+    u_lightModel:      m4.identity(),
+    u_lightColor:      [256.0, 256.0, 256.0],
     u_pointLightColor: [23.47, 21.31, 20.79],
+    u_camerapos:       SpectatorCamera.__data.m_position,
 };
 
 const lightUniforms = {
@@ -198,6 +200,7 @@ const updateLightPosition = function(dt) {
     );
 
     lightUniforms.u_model = modelMatrix;
+    sphereUniforms.u_lightModel = modelMatrix;
 }
 
 const getElapsedTime = function(currentTime) {
@@ -273,7 +276,7 @@ function render(time) {
     statsMs.end();
     statsMBs.end();
     statsFPS.end();
-    console.log(time);
+
     requestAnimationFrame(render);
 }
 
