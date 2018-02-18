@@ -72,6 +72,10 @@ calculateAttenuation
     return  1.0 / (distance * distance);
 }
 
+// Using provided light model matrix,
+// the method retrieves light position.
+//
+// @return vec3; point light position.
 vec3
 calculateLightPosition()
 {
@@ -79,6 +83,54 @@ calculateLightPosition()
         u_lightModel *
         vec4(0.0, 0.0, 0.0, 1.0)
     );
+}
+
+// @param albedo   Albedo coefficient of
+//                 current fragment.
+// @param metallic Metallic coefficient of
+//                 current fragment.
+//
+// @return Surface reflection at zero
+//         incidence.
+vec3
+calculateF0
+(
+    float albedo,
+    float metallic
+)
+{
+    // For dielectric materials an average
+    // value is 0.04, so if the material gets
+    // more and more metallic, we interpolate
+    // between it and the fragment's albedo.
+    // For fully metallic material,
+    // F0 is just an albedo.
+    vec3 F0 = vec3(0.04);
+    F0[0] = mix(F0[0], albedo, metallic);
+    F0[1] = mix(F0[1], albedo, metallic);
+    F0[2] = mix(F0[2], albedo, metallic);
+    return F0;
+}
+
+// Schlick's approximation of Fresnel
+// equation.
+// @param cosTheta Lambertian coefficient
+//                 based on dot product of
+//                 fragment's normal and
+//                 incoming light ray.
+// @param F0       Surface reflection
+//                 at zero incidence.
+//
+// @return The ratio of light that gets
+//         reflected on a surface.
+vec3 fresnelSchlick
+(
+    float cosTheta,
+    vec3 F0
+)
+{
+    return F0 + (1.0 - F0) *
+           pow(1.0 - cosTheta, 5.0);
 }
 
 void main() {
