@@ -54,6 +54,8 @@ varying vec2 v_texcoord;
 varying vec3 v_worldpos;
 varying vec3 v_normal;
 
+const float PI = 3.14159265359;
+
 // Returns attenuation coefficient,
 // which simulates how a light source
 // intensity is dimmed over a distance.
@@ -83,6 +85,24 @@ calculateLightPosition()
         u_lightModel *
         vec4(0.0, 0.0, 0.0, 1.0)
     );
+}
+
+// @return Fragment's albedo coefficient.
+float acquireAlbedo()
+{
+    return texture2D(u_albedo, v_texcoord).r;
+}
+
+// @return Fragment's metallic coefficient.
+float acquireMetallic()
+{
+    return texture2D(u_metallic, v_texcoord).r;
+}
+
+// @return Fragment's roughness coefficient.
+float acquireRoughness()
+{
+    return texture2D(u_roughness, v_texcoord).r;
 }
 
 // @param albedo   Albedo coefficient of
@@ -133,6 +153,61 @@ vec3 fresnelSchlick
            pow(1.0 - cosTheta, 5.0);
 }
 
+
+float
+distributionGGX
+(
+    vec3 N,
+    vec3 H,
+    float roughness
+)
+{
+    float a      = roughness*roughness;
+    float a2     = a*a;
+    float NdotH  = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH*NdotH;
+
+    float nom   = a2;
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return nom / denom;
+}
+
+float
+geometrySchlickGGX
+(
+    float NdotV,
+    float roughness
+)
+{
+    float r = (roughness + 1.0);
+    float k = (r*r) / 8.0;
+
+    float nom   = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return nom / denom;
+}
+
+float
+geometrySmith
+(
+    vec3 N,
+    vec3 V,
+    vec3 L,
+    float roughness
+)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2  = geometrySchlickGGX(NdotV, roughness);
+    float ggx1  = geometrySchlickGGX(NdotL, roughness);
+
+    return ggx1 * ggx2;
+}
+
+
 void main() {
     vec3 lPos  = calculateLightPosition();
     vec3 fragN = normalize(v_normal);
@@ -143,6 +218,13 @@ void main() {
     float distance = length(v_worldpos - lPos);
     float atten    = calculateAttenuation(distance);
     vec3  radiance = atten * u_lightColor;
+
+    float albedo    = acquireAlbedo();
+    float metallic  = acquireMetallic();
+    float roughness = acquireRoughness();
+
+    float NDF = distributionGGX(fragN, fragH, roughness);
+    float G   = geometrySmith(fragN, fragV, fragL, roughness);
 
     gl_FragColor = vec4(texture2D(u_roughness, v_texcoord).rgb, 1.0);
 }
