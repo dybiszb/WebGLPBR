@@ -82,7 +82,13 @@ document.body.appendChild(statsMs.dom);
 //  Shaders Viewer Panel.
 // =============================================================================
 const shaderCodeBox = document.querySelector('#shadersViewer');
-const shaderCode    = document.createTextNode(`${pbrVS}\n${pbrFG}`);
+const shaderCode    = document.createTextNode
+                      (
+                        `${pbrFG}\n
+                         ${pbrVS}\n
+                         ${lightVS}\n
+                         ${lightFG}`
+                      );
 shaderCodeBox.appendChild(shaderCode);
 
 // =============================================================================
@@ -107,33 +113,51 @@ const textures = twgl.createTextures(gl, {
 // =============================================================================
 //  Load Geometry.
 // =============================================================================
-let   sphereModelMatrix        = m4.identity();
+var   sphereModelMatrix        = m4.identity();
 const sphereRadius             = 1.0;
-const sphereSubdivisionsAxis   = 20;
-const sphereSubdivisionsHeight = 20;
+const sphereSubdivisionsAxis   = 30;
+const sphereSubdivisionsHeight = 30;
 const sphereBufferI            = twgl.primitives.createSphereBufferInfo(
                                  gl,
                                  sphereRadius,
                                  sphereSubdivisionsAxis,
                                  sphereSubdivisionsHeight);
 
+ // var   lightModelMatrix        = m4.translation([-2.0, 0.0, 0.0]);
+ const lightRadius             = 0.03;
+ const lightSubdivisionsAxis   = 15;
+ const lightSubdivisionsHeight = 15;
+ const lightBufferI            = twgl.primitives.createSphereBufferInfo(
+                                 gl,
+                                 lightRadius,
+                                 lightSubdivisionsAxis,
+                                 lightSubdivisionsHeight);
+
 // =============================================================================
 //  Load shaders.
 // =============================================================================
 const sphereProgram = twgl.createProgramInfo(gl, [pbrVS, pbrFG]);
+const lightProgram  = twgl.createProgramInfo(gl, [lightVS, lightFG]);
 
 // =============================================================================
 //  Load uniforms.
 // =============================================================================
 const sphereUniforms = {
-    u_model:      sphereModelMatrix,
-    u_view:       view,
-    u_projection: projection,
-    u_color:      [1.0, 0.0, 0.0],
-    u_albedo:     textures.albedo,
-    u_metallic:   textures.metallic,
-    u_normal:     textures.normal,
-    u_roughness:  textures.roughness,
+    u_model:           sphereModelMatrix,
+    u_view:            view,
+    u_projection:      projection,
+    u_albedo:          textures.albedo,
+    u_metallic:        textures.metallic,
+    u_normal:          textures.normal,
+    u_roughness:       textures.roughness,
+    u_pointLightColor: [23.47, 21.31, 20.79],
+};
+
+const lightUniforms = {
+    u_model:           m4.identity(),
+    u_view:            view,
+    u_projection:      projection,
+    u_color:           [255.0, 255.0, 255.0],
 };
 
 // =============================================================================
@@ -144,11 +168,88 @@ const updateViewMatrix = function () {
     m4.inverse(view, view);
 }
 
+const updateLightPosition = function(dt) {
+    // Hack for local static variable. The variable stores angle of rotation.
+    if ( typeof updateLightPosition.angleCounter == 'undefined' ) {
+        updateLightPosition.angleCounter = 0.0;
+    }
+
+    const modelMatrix                 = m4.identity();
+    updateLightPosition.angleCounter -= dt / 3000.0;
+
+    // Precalculate translations modifiers and translation on X axis.
+    var translationModifierX = Math.cos(updateLightPosition.angleCounter);
+    var translationModifierY = Math.sin(updateLightPosition.angleCounter);
+    var translationX         = 1.6 + 0.5 * translationModifierX;
+
+    m4.axisRotate
+    (
+        modelMatrix,
+        [0.0, 1.0, 0.0],
+        updateLightPosition.angleCounter,
+        modelMatrix
+    );
+
+    m4.translate
+    (
+        modelMatrix,
+        [translationX, translationModifierY, 0.0],
+        modelMatrix
+    );
+
+    lightUniforms.u_model = modelMatrix;
+}
+
+const getElapsedTime = function(currentTime) {
+    // Hack for local static variable. The variable stores last seen time.
+    if ( typeof getElapsedTime.last == 'undefined' ) {
+        getElapsedTime.last = 0.0;
+    }
+
+    var timeDifference  = currentTime - getElapsedTime.last;
+    getElapsedTime.last = currentTime;
+
+    return timeDifference;
+}
+
+const adjustPerspectiveAndViewport = function()
+{
+    twgl.resizeCanvasToDisplaySize(gl.canvas);
+    m4.perspective
+    (
+        fov,
+        gl.canvas.clientWidth / gl.canvas.clientHeight,
+        near,
+        far,
+        projection
+    );
+    gl.viewport
+    (
+        0,
+        0,
+        gl.canvas.width,
+        gl.canvas.height
+    );
+}
+
+const clearScreenBuffers = function() {
+    gl.enable(gl.DEPTH_TEST);
+    gl.clearColor(0.1132, 0.1132, 0.1132, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+}
+
 const renderSphere = function () {
     gl.useProgram(sphereProgram.program);
     twgl.setUniforms(sphereProgram, sphereUniforms);
     twgl.setBuffersAndAttributes(gl, sphereProgram, sphereBufferI);
     twgl.drawBufferInfo(gl, sphereBufferI);
+}
+
+const renderLight = function() {
+    gl.useProgram(lightProgram.program);
+    twgl.setUniforms(lightProgram, lightUniforms);
+    twgl.setBuffersAndAttributes(gl, lightProgram, lightBufferI);
+    twgl.drawBufferInfo(gl, lightBufferI);
 }
 
 // =============================================================================
@@ -158,23 +259,21 @@ function render(time) {
     statsFPS.begin();
     statsMBs.begin();
     statsMs.begin();
+
     IO.handleKeyboard();
     updateViewMatrix();
+    updateLightPosition(getElapsedTime(time));
 
-    twgl.resizeCanvasToDisplaySize(gl.canvas);
-    m4.perspective(fov, gl.canvas.clientWidth / gl.canvas.clientHeight, near,
-                   far, projection);
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    adjustPerspectiveAndViewport();
+    clearScreenBuffers();
 
-    gl.enable(gl.DEPTH_TEST);
-    gl.clearColor(0.1132, 0.1132, 0.1132, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // rgb(43,87,151)
     renderSphere();
+    renderLight();
 
     statsMs.end();
     statsMBs.end();
     statsFPS.end();
+    console.log(time);
     requestAnimationFrame(render);
 }
 
