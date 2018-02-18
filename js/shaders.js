@@ -87,19 +87,28 @@ calculateLightPosition()
     );
 }
 
-// @return Fragment's albedo coefficient.
-float acquireAlbedo()
+// @return Fragment's albedo coefficient,
+//         in linear space.
+vec3 acquireAlbedo()
 {
-    return texture2D(u_albedo, v_texcoord).r;
+    // Sample and convert to linear space.
+    vec3 albedo = texture2D(u_albedo, v_texcoord).rgb;
+    albedo[0] = pow(albedo[0], 2.2);
+    albedo[1] = pow(albedo[1], 2.2);
+    albedo[2] = pow(albedo[2], 2.2);
+
+    return albedo;
 }
 
-// @return Fragment's metallic coefficient.
+// @return Fragment's metallic coefficient,
+//         in linear space.
 float acquireMetallic()
 {
     return texture2D(u_metallic, v_texcoord).r;
 }
 
-// @return Fragment's roughness coefficient.
+// @return Fragment's roughness coefficient,
+//         in linear space.
 float acquireRoughness()
 {
     return texture2D(u_roughness, v_texcoord).r;
@@ -115,7 +124,7 @@ float acquireRoughness()
 vec3
 calculateF0
 (
-    float albedo,
+    vec3  albedo,
     float metallic
 )
 {
@@ -126,9 +135,9 @@ calculateF0
     // For fully metallic material,
     // F0 is just an albedo.
     vec3 F0 = vec3(0.04);
-    F0[0] = mix(F0[0], albedo, metallic);
-    F0[1] = mix(F0[1], albedo, metallic);
-    F0[2] = mix(F0[2], albedo, metallic);
+    F0[0] = mix(F0[0], albedo[0], metallic);
+    F0[1] = mix(F0[1], albedo[1], metallic);
+    F0[2] = mix(F0[2], albedo[2], metallic);
     return F0;
 }
 
@@ -152,7 +161,6 @@ vec3 fresnelSchlick
     return F0 + (1.0 - F0) *
            pow(1.0 - cosTheta, 5.0);
 }
-
 
 float
 distributionGGX
@@ -207,26 +215,65 @@ geometrySmith
     return ggx1 * ggx2;
 }
 
+vec3
+cookTorranceBRDF
+(
+    vec3 fragN,
+    vec3 fragV,
+    vec3 fragH,
+    vec3 fragL
+)
+{
+    vec3  albedo    = acquireAlbedo();
+    float metallic  = acquireMetallic();
+    float roughness = acquireRoughness();
+
+    vec3 F0 = calculateF0(albedo, metallic);
+
+    float D = distributionGGX(fragN, fragH, roughness);
+    float G = geometrySmith(fragN, fragV, fragL, roughness);
+    vec3  F = fresnelSchlick(max(dot(fragH, fragV), 0.0), F0);
+
+    vec3 kS = F;
+    vec3 kD = vec3(1.0) - kS;
+
+    // If surface is fully metallic,
+    // diffuse is not present.
+    kD *= 1.0 - metallic;
+
+    vec3  nom      = D * G * F;
+    float denom    = 4.0 * max(dot(fragN, fragV), 0.0) * max(dot(fragN, fragL), 0.0);
+    vec3  specTerm = nom / max(denom, 0.001);
+
+    return kD * albedo / PI + kS * specTerm;
+}
 
 void main() {
     vec3 lPos  = calculateLightPosition();
     vec3 fragN = normalize(v_normal);
     vec3 fragV = normalize(u_camerapos - v_worldpos);
-    vec3 fragL = normalize(lPos - v_worldpos);
     vec3 fragH = normalize(lPos + fragV);
+    vec3 fragL = normalize(lPos - v_worldpos);
 
-    float distance = length(v_worldpos - lPos);
-    float atten    = calculateAttenuation(distance);
-    vec3  radiance = atten * u_lightColor;
+    float distance  = length(v_worldpos - lPos);
+    float atten     = calculateAttenuation(distance);
+    vec3  radiance  = atten * u_lightColor;
 
-    float albedo    = acquireAlbedo();
-    float metallic  = acquireMetallic();
-    float roughness = acquireRoughness();
+    vec3 brdf = cookTorranceBRDF(fragN, fragV, fragH, fragL);
 
-    float NDF = distributionGGX(fragN, fragH, roughness);
-    float G   = geometrySmith(fragN, fragV, fragL, roughness);
+    float nDotL = max(dot(fragN, fragL), 0.0);
+    vec3  L0    = brdf * radiance * nDotL;
 
-    gl_FragColor = vec4(texture2D(u_roughness, v_texcoord).rgb, 1.0);
+    // Artifficial ambient lighting.
+    vec3 albedo = acquireAlbedo();
+    vec3 ambient = vec3(0.3) * albedo;
+    vec3 color   = ambient + L0;
+
+    // HDR and gamma correction.
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0/2.2));
+
+    gl_FragColor = vec4(color, 1.0);
 }
 `;
 
