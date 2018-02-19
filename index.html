@@ -182,7 +182,7 @@ const updateLightPosition = function(dt) {
     // Precalculate translations modifiers and translation on X axis.
     var translationModifierX = Math.cos(updateLightPosition.angleCounter);
     var translationModifierY = Math.sin(updateLightPosition.angleCounter);
-    var translationX         = 1.6 + 0.5 * translationModifierX;
+    var translationX         = 5.6 + 0.5 * translationModifierX;
 
     m4.axisRotate
     (
@@ -195,7 +195,7 @@ const updateLightPosition = function(dt) {
     m4.translate
     (
         modelMatrix,
-        [translationX, translationModifierY, 0.0],
+        [translationX, 2.0 * translationModifierY, 0.0],
         modelMatrix
     );
 

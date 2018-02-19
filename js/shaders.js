@@ -245,7 +245,7 @@ cookTorranceBRDF
     float denom    = 4.0 * max(dot(fragN, fragV), 0.0) * max(dot(fragN, fragL), 0.0);
     vec3  specTerm = nom / max(denom, 0.001);
 
-    return kD * albedo / PI + kS * specTerm;
+    return kD * albedo / PI + specTerm;
 }
 
 void main() {
@@ -266,7 +266,7 @@ void main() {
 
     // Artifficial ambient lighting.
     vec3 albedo = acquireAlbedo();
-    vec3 ambient = vec3(0.3) * albedo;
+    vec3 ambient = vec3(0.07) * albedo;
     vec3 color   = ambient + L0;
 
     // HDR and gamma correction.
