@@ -49,6 +49,7 @@ uniform vec3 u_lightColor;
 uniform vec3 u_camerapos;
 
 uniform samplerCube u_irriadianceMap;
+uniform samplerCube u_specularMap;
 uniform sampler2D   u_brdf2DLUT;
 
 varying vec2 v_texcoord;
@@ -278,10 +279,30 @@ calculateAmbient
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;
 
-    vec3 irradiance = getIrradiance(fragN);
-    vec3 diffuse      = irradiance * albedo;
+    vec3 irradiance = 2.1 * getIrradiance(fragN);
+    vec3 diffuse    = irradiance * albedo;
 
     return (kD * diffuse);
+}
+
+vec3
+calculateSpecular
+(
+    vec3 fragN,
+    vec3 fragV
+)
+{
+    float roughness = acquireRoughness();
+    vec3  albedo    = acquireAlbedo();
+    float metallic  = acquireMetallic();
+
+    vec3 F0 = calculateF0(albedo, metallic);
+
+    vec3 fragR = reflect(-fragV, fragN);
+    fragR.x = -fragR.x;
+    vec3 prefilteredColor = textureCube(u_specularMap, fragR).rgb;
+    vec2 brdf  = texture2D(u_brdf2DLUT, vec2(max(dot(fragN, fragV), 0.0), roughness)).xy;
+    return prefilteredColor * (F0 * brdf.x + brdf.y);
 }
 
 void main() {
@@ -300,8 +321,10 @@ void main() {
     float nDotL = max(dot(fragN, fragL), 0.0);
     vec3  L0    = brdf * radiance * nDotL;
 
-    vec3 ambient = calculateAmbient(fragN, fragV);
-    vec3 color   = ambient + L0;
+    // Indirect lighting.
+    vec3 ambient  = calculateAmbient(fragN, fragV);
+    vec3 specular = calculateSpecular(fragN, fragV);
+    vec3 color   = ambient + specular;
 
     // HDR and gamma correction.
     color = color / (color + vec3(1.0));

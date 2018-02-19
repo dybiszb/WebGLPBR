@@ -116,6 +116,8 @@ const textures = twgl.createTextures(gl, {
         './res/skybox1/posz.bmp',
         './res/skybox1/negz.bmp',
       ],
+      minLod: 0,
+      maxLod: 5,
   },
   skybox2: {
       target: gl.TEXTURE_CUBE_MAP,
@@ -154,6 +156,13 @@ const textures = twgl.createTextures(gl, {
   metallic:  {src: `./res/rustediron-streaks_metallic.png`},
   normal:    {src: `./res/rustediron-streaks_normal.png`},
   roughness: {src: `./res/rustediron-streaks_roughness.png`},
+
+  // Alternative material
+  // albedo:    {src: `./res/old_textured_fabric/old-textured-fabric-albedo3.png`},
+  // metallic:  {src: `./res/old_textured_fabric/old-textured-fabric-metalic.png`},
+  // normal:    {src: `./res/old_textured_fabric/rustediron-streaks_normal.png`},
+  // roughness: {src: `./res/old_textured_fabric/old-textured-fabric-roughness2.png`},
+
   brdf2DLUT: {src: `./res/BRDF2DLUT.png`},
 });
 
@@ -200,10 +209,11 @@ const sphereUniforms = {
     u_metallic:        textures.metallic,
     u_normal:          textures.normal,
     u_roughness:       textures.roughness,
-    u_irriadianceMap:  textures.irriadianceMap2,
+    u_specularMap:     textures.skybox1,
+    u_irriadianceMap:  textures.irriadianceMap1,
     u_brdf2DLUT:       textures.brdf2DLUT,
     u_lightModel:      m4.identity(),
-    u_lightColor:      [256.0, 256.0, 256.0],
+    u_lightColor:      [0.47, 1.31, 0.79],
     u_pointLightColor: [23.47, 21.31, 20.79],
     u_camerapos:       SpectatorCamera.__data.m_position,
 };
@@ -216,7 +226,7 @@ const lightUniforms = {
 };
 
 const skyboxUniforms = {
-    u_skybox:          textures.skybox2,
+    u_skybox:          textures.skybox1,
     u_model:           m4.identity(),
     u_view:            view,
     u_projection:      projection,
@@ -242,7 +252,7 @@ const updateLightPosition = function(dt) {
     // Precalculate translations modifiers and translation on X axis.
     var translationModifierX = Math.cos(updateLightPosition.angleCounter);
     var translationModifierY = Math.sin(updateLightPosition.angleCounter);
-    var translationX         = 5.6 + 0.5 * translationModifierX;
+    var translationX         = 1.6 + 0.5 * translationModifierX;
 
     m4.axisRotate
     (
@@ -325,11 +335,6 @@ const renderSkybox = function() {
 }
 
 // =============================================================================
-//  Generate Mipmaps.
-// =============================================================================
-
-
-// =============================================================================
 //  Rendering function.
 // =============================================================================
 function render(time) {
@@ -345,7 +350,7 @@ function render(time) {
     clearScreenBuffers();
 
     renderSphere();
-    renderLight();
+    //renderLight();
     renderSkybox();
 
     statsMs.end();
