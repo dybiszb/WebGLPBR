@@ -3,7 +3,6 @@ const pbrVS =
 // =================================================
 //        P B R   V E R T E X   S H A D E R
 // =================================================
-// @author: bdybisz
 // -------------------------------------------------
 attribute vec4 a_position;
 attribute vec2 a_texcoord;
@@ -37,7 +36,6 @@ const pbrFG =
 // =================================================
 //      P B R   F R A G M E N T   S H A D E R
 // =================================================
-// @author: bdybisz
 // -------------------------------------------------
 precision mediump float;
 
@@ -285,18 +283,21 @@ const skyboxVS = `
 
 attribute vec4 a_position;
 
-varying vec3 v_texCoords;
-varying vec3 v_position;
-
 uniform mat4 u_model;
 uniform mat4 u_view;
 uniform mat4 u_projection;
 
+varying vec3 v_texCoords;
+
 void main() {
-  v_texCoords = vec3(a_position);
-  vec4 finalPosition = u_projection * mat4(mat3(u_view)) * a_position;
-  v_position = vec3(finalPosition);
-  gl_Position = finalPosition;
+    v_texCoords = vec3(a_position);
+
+    // Remove translation in order to
+    // obtain an illusion of infinitely
+    // far away environment.
+    gl_Position = u_projection       *
+                  mat4(mat3(u_view)) *
+                  a_position;
 }
 `;
 
@@ -305,19 +306,25 @@ const skyboxFG = `
 // S K Y B O X  F R A G M E N T S H A D E R
 // ============================================
 // --------------------------------------------
-
 precision mediump float;
 
 varying vec3 v_texCoords;
-varying vec3 v_position;
 
 uniform samplerCube u_skybox;
 
 void main() {
-   vec3 flippedY = v_texCoords;
-   flippedY.x = 1.0 - flippedY.x;
-   vec3 color = textureCube(u_skybox, flippedY).rgb;
-   gl_FragColor = vec4(color, 1.0);
+    // Flip U coordinate in order to
+    // correctly display the texture.
+    vec3 flippedU = v_texCoords;
+    flippedU.x = 1.0 - flippedU.x;
+
+    vec3 color   = textureCube
+                  (
+                    u_skybox,
+                    flippedU
+                  ).rgb;
+
+    gl_FragColor = vec4(color, 1.0);
 }
 `;
 
@@ -326,7 +333,6 @@ const lightVS =
 // =================================================
 //        L I G H T   V E R T E X   S H A D E R
 // =================================================
-// @author: bdybisz
 // -------------------------------------------------
 attribute vec4 a_position;
 uniform mat4 u_model;
@@ -345,7 +351,6 @@ const lightFG =
 // =================================================
 //     L I G H T   F R A G M E N T   S H A D E R
 // =================================================
-// @author: bdybisz
 // -------------------------------------------------
 precision mediump float;
 uniform vec3 u_color;
