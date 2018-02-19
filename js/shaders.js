@@ -48,6 +48,9 @@ uniform mat4 u_lightModel;
 uniform vec3 u_lightColor;
 uniform vec3 u_camerapos;
 
+uniform samplerCube u_irriadianceMap;
+uniform sampler2D   u_brdf2DLUT;
+
 varying vec2 v_texcoord;
 varying vec3 v_worldpos;
 varying vec3 v_normal;
@@ -246,6 +249,41 @@ cookTorranceBRDF
     return kD * albedo / PI + specTerm;
 }
 
+vec3
+getIrradiance
+(
+    vec3 fragN
+)
+{
+    return textureCube
+           (
+               u_irriadianceMap,
+               fragN
+           ).rgb;
+}
+
+vec3
+calculateAmbient
+(
+    vec3 fragN,
+    vec3 fragV
+)
+{
+    vec3  albedo    = acquireAlbedo();
+    float metallic  = acquireMetallic();
+
+    vec3 F0 = calculateF0(albedo, metallic);
+
+    vec3 kS = fresnelSchlick(max(dot(fragN, fragV), 0.0), F0);
+    vec3 kD = 1.0 - kS;
+    kD *= 1.0 - metallic;
+
+    vec3 irradiance = getIrradiance(fragN);
+    vec3 diffuse      = irradiance * albedo;
+
+    return (kD * diffuse);
+}
+
 void main() {
     vec3 lPos  = calculateLightPosition();
     vec3 fragN = normalize(v_normal);
@@ -262,9 +300,7 @@ void main() {
     float nDotL = max(dot(fragN, fragL), 0.0);
     vec3  L0    = brdf * radiance * nDotL;
 
-    // Artifficial ambient lighting.
-    vec3 albedo = acquireAlbedo();
-    vec3 ambient = vec3(0.07) * albedo;
+    vec3 ambient = calculateAmbient(fragN, fragV);
     vec3 color   = ambient + L0;
 
     // HDR and gamma correction.

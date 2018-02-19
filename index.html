@@ -128,10 +128,33 @@ const textures = twgl.createTextures(gl, {
         './res/skybox2/negz.bmp',
       ],
   },
+  irriadianceMap1: {
+      target: gl.TEXTURE_CUBE_MAP,
+      src: [
+        './res/skybox1_light/posx.bmp',
+        './res/skybox1_light/negx.bmp',
+        './res/skybox1_light/posy.bmp',
+        './res/skybox1_light/negy.bmp',
+        './res/skybox1_light/posz.bmp',
+        './res/skybox1_light/negz.bmp',
+      ],
+  },
+  irriadianceMap2: {
+      target: gl.TEXTURE_CUBE_MAP,
+      src: [
+        './res/skybox2_light/posx.bmp',
+        './res/skybox2_light/negx.bmp',
+        './res/skybox2_light/posy.bmp',
+        './res/skybox2_light/negy.bmp',
+        './res/skybox2_light/posz.bmp',
+        './res/skybox2_light/negz.bmp',
+      ],
+  },
   albedo:    {src: `./res/rustediron-streaks_basecolor.png`},
   metallic:  {src: `./res/rustediron-streaks_metallic.png`},
   normal:    {src: `./res/rustediron-streaks_normal.png`},
   roughness: {src: `./res/rustediron-streaks_roughness.png`},
+  brdf2DLUT: {src: `./res/BRDF2DLUT.png`},
 });
 
 // =============================================================================
@@ -177,6 +200,8 @@ const sphereUniforms = {
     u_metallic:        textures.metallic,
     u_normal:          textures.normal,
     u_roughness:       textures.roughness,
+    u_irriadianceMap:  textures.irriadianceMap2,
+    u_brdf2DLUT:       textures.brdf2DLUT,
     u_lightModel:      m4.identity(),
     u_lightColor:      [256.0, 256.0, 256.0],
     u_pointLightColor: [23.47, 21.31, 20.79],
@@ -191,10 +216,10 @@ const lightUniforms = {
 };
 
 const skyboxUniforms = {
-  u_skybox:            textures.skybox2,
-  u_model:             m4.identity(),
-  u_view:              view,
-  u_projection:        projection,
+    u_skybox:          textures.skybox2,
+    u_model:           m4.identity(),
+    u_view:            view,
+    u_projection:      projection,
 };
 
 // =============================================================================
@@ -298,6 +323,11 @@ const renderSkybox = function() {
     twgl.drawBufferInfo(gl, skyboxBufferI);
     gl.depthMask(true);
 }
+
+// =============================================================================
+//  Generate Mipmaps.
+// =============================================================================
+
 
 // =============================================================================
 //  Rendering function.
