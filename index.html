@@ -98,12 +98,34 @@ const projection = m4.identity();
 let   view       = m4.identity();
 const fov        = 45 * Math.PI / 180;
 const near       = 0.01;
-const far        = 1000.0;
+const far        = 3000.0;
 
 // =============================================================================
 // Load Textures.
 // =============================================================================
 const textures = twgl.createTextures(gl, {
+  skybox1: {
+      target: gl.TEXTURE_CUBE_MAP,
+      src: [
+        './res/skybox1/posx.bmp',
+        './res/skybox1/negx.bmp',
+        './res/skybox1/posy.bmp',
+        './res/skybox1/negy.bmp',
+        './res/skybox1/posz.bmp',
+        './res/skybox1/negz.bmp',
+      ],
+  },
+  skybox2: {
+      target: gl.TEXTURE_CUBE_MAP,
+      src: [
+        './res/skybox2/posx.bmp',
+        './res/skybox2/negx.bmp',
+        './res/skybox2/posy.bmp',
+        './res/skybox2/negy.bmp',
+        './res/skybox2/posz.bmp',
+        './res/skybox2/negz.bmp',
+      ],
+  },
   albedo:    {src: `./res/rustediron-streaks_basecolor.png`},
   metallic:  {src: `./res/rustediron-streaks_metallic.png`},
   normal:    {src: `./res/rustediron-streaks_normal.png`},
@@ -123,20 +145,24 @@ const sphereBufferI            = twgl.primitives.createSphereBufferInfo(
                                  sphereSubdivisionsAxis,
                                  sphereSubdivisionsHeight);
 
- const lightRadius             = 0.03;
- const lightSubdivisionsAxis   = 15;
- const lightSubdivisionsHeight = 15;
- const lightBufferI            = twgl.primitives.createSphereBufferInfo(
+const lightRadius              = 0.03;
+const lightSubdivisionsAxis    = 15;
+const lightSubdivisionsHeight  = 15;
+const lightBufferI             = twgl.primitives.createSphereBufferInfo(
                                  gl,
                                  lightRadius,
                                  lightSubdivisionsAxis,
                                  lightSubdivisionsHeight);
 
+const skyboxBufferI            = twgl.primitives.createCubeBufferInfo(
+                                 gl,
+                                 128);
 // =============================================================================
 //  Load shaders.
 // =============================================================================
 const sphereProgram = twgl.createProgramInfo(gl, [pbrVS, pbrFG]);
 const lightProgram  = twgl.createProgramInfo(gl, [lightVS, lightFG]);
+const skyboxProgram = twgl.createProgramInfo(gl, [skyboxVS, skyboxFG]);
 
 // =============================================================================
 //  Load uniforms.
@@ -160,6 +186,13 @@ const lightUniforms = {
     u_view:            view,
     u_projection:      projection,
     u_color:           [255.0, 255.0, 255.0],
+};
+
+const skyboxUniforms = {
+  u_skybox:            textures.skybox2,
+  u_model:             m4.identity(),
+  u_view:              view,
+  u_projection:        projection,
 };
 
 // =============================================================================
@@ -255,6 +288,15 @@ const renderLight = function() {
     twgl.drawBufferInfo(gl, lightBufferI);
 }
 
+const renderSkybox = function() {
+    gl.depthMask(false);
+    gl.useProgram(skyboxProgram.program);
+    twgl.setUniforms(skyboxProgram, skyboxUniforms);
+    twgl.setBuffersAndAttributes(gl, skyboxProgram, skyboxBufferI);
+    twgl.drawBufferInfo(gl, skyboxBufferI);
+    gl.depthMask(true);
+}
+
 // =============================================================================
 //  Rendering function.
 // =============================================================================
@@ -272,6 +314,7 @@ function render(time) {
 
     renderSphere();
     renderLight();
+    renderSkybox();
 
     statsMs.end();
     statsMBs.end();

@@ -277,6 +277,50 @@ void main() {
 }
 `;
 
+const skyboxVS = `
+// ============================================
+// S K Y B O X  V E R T E X   S H A D E R
+// ============================================
+// --------------------------------------------
+
+attribute vec4 a_position;
+
+varying vec3 v_texCoords;
+varying vec3 v_position;
+
+uniform mat4 u_model;
+uniform mat4 u_view;
+uniform mat4 u_projection;
+
+void main() {
+  v_texCoords = vec3(a_position);
+  vec4 finalPosition = u_projection * mat4(mat3(u_view)) * a_position;
+  v_position = vec3(finalPosition);
+  gl_Position = finalPosition;
+}
+`;
+
+const skyboxFG = `
+// ============================================
+// S K Y B O X  F R A G M E N T S H A D E R
+// ============================================
+// --------------------------------------------
+
+precision mediump float;
+
+varying vec3 v_texCoords;
+varying vec3 v_position;
+
+uniform samplerCube u_skybox;
+
+void main() {
+   vec3 flippedY = v_texCoords;
+   flippedY.x = 1.0 - flippedY.x;
+   vec3 color = textureCube(u_skybox, flippedY).rgb;
+   gl_FragColor = vec4(color, 1.0);
+}
+`;
+
 const lightVS =
     `
 // =================================================
